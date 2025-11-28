@@ -1,7 +1,6 @@
-flask==3.0.0
-diffusers==0.24.0
-transformers==4.35.2
-accelerate==0.24.1
-torch==2.1.1
-Pillow==10.1.0
-safetensors==0.4.1
+flask
+diffusers
+transformers
+accelerate
+torch
+pillow
