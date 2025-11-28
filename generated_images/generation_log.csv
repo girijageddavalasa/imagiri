@@ -1,0 +1,3 @@
+Timestamp,Prompt,Enhanced_Prompt,Negative_Prompt,Steps,Width,Height,Num_Images,Filenames,Device
+2025-11-28 23:41:37,girl eating pani puri on road side shop,"girl eating pani puri on road side shop, highly detailed, 4K quality, professional photography, sharp focus, masterpiece",,5,512,640,1,imagiri_20251128_234137_0.png,cpu
+2025-11-28 23:46:54,girl running in the race with other aNIMALS AND BIRDS,"girl running in the race with other aNIMALS AND BIRDS, highly detailed, 4K quality, professional photography, sharp focus, masterpiece",,5,512,640,1,imagiri_20251128_234653_0.png,cpu

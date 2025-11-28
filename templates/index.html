@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Imagiri – AI-Powered Image Generation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-green: #2ecc71;
+      --dark-green: #27ae60;
+      --dark-grey: #1a1a1a;
+      --darker-grey: #2a2a2a;
+      --light-grey: #f5f5f5;
+      --card-grey: #202020;
+      --text-dark: #333333;
+      --border: #cccccc;
+      --transition: 0.2s cubic-bezier(.77,.2,.05,1);
+      --input-bg: #24292e;
+      --input-border: #333;
+      --radius: 12px;
+      --radius-small: 6px;
+      --shadow: 0 3px 24px 0 rgba(44, 44, 44, 0.18);
+      --spacing: 16px;
+      --font-base: 'Inter', sans-serif;
+      --header-size: 30px;
+      --subtitle-size: 16px;
+      --card-shadow: 0 4px 14px rgba(30,40,30,0.13);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-base);
+      background: linear-gradient(135deg, var(--darker-grey) 55%, var(--primary-green) 180%);
+      color: var(--light-grey);
+      min-height: 100vh;
+      font-size: 16px;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ========== LOADING SCREEN ========== */
+    #startup-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at center, #181818, #000000 90%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      gap: 24px;
+    }
+
+    .spinner-large {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 6px solid #444;
+      border-top-color: var(--primary-green);
+      border-right-color: var(--dark-green);
+      animation: spin-loader 1.2s linear infinite;
+    }
+
+    @keyframes spin-loader {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #startup-loader h1 {
+      font-size: 2.8rem;
+      color: var(--primary-green);
+      margin: 0;
+      letter-spacing: 2px;
+      font-weight: 700;
+    }
+
+    #startup-loader p {
+      color: #aaaaaa;
+      font-size: 1rem;
+      margin: 0;
+      letter-spacing: 0.5px;
+    }
+
+    #startup-loader .loading-status {
+      color: #888;
+      font-size: 0.9rem;
+      margin-top: 8px;
+    }
+
+    /* ========== MAIN APP ========== */
+    #main-app {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+    }
+
+    header {
+      width: 100%;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      background: linear-gradient(90deg, var(--darker-grey) 70%, var(--dark-green) 120%);
+      box-shadow: 0 1px 0 rgba(44,44,44,0.03);
+      border-bottom: 4px solid var(--primary-green);
+      padding: 0 var(--spacing);
+    }
+
+    .nav-title {
+      font-size: var(--header-size);
+      font-weight: 700;
+      color: var(--primary-green);
+      letter-spacing: 1px;
+      margin-right: var(--spacing);
+    }
+
+    .nav-tagline {
+      color: var(--light-grey);
+      font-size: var(--subtitle-size);
+      opacity: 0.8;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1.3fr;
+      gap: 20px;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 1400px) {
+      main {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: linear-gradient(145deg, #1b1b1b, #151515);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 20px;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .panel-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--primary-green);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 4px;
+    }
+
+    label {
+      font-size: 0.9rem;
+      color: #e0e0e0;
+      font-weight: 500;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      padding: 12px 14px;
+      border-radius: var(--radius-small);
+      border: 1px solid var(--input-border);
+      background: var(--input-bg);
+      color: var(--light-grey);
+      font-size: 0.95rem;
+      font-family: var(--font-base);
+      resize: vertical;
+      transition: all var(--transition);
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary-green);
+      box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.2);
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: var(--radius-small);
+      border: 1px solid var(--input-border);
+      background: var(--input-bg);
+      color: var(--light-grey);
+      font-size: 0.95rem;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--primary-green);
+      box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.2);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      cursor: pointer;
+      accent-color: var(--primary-green);
+    }
+
+    .slider-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+    }
+
+    .slider-value {
+      background: var(--input-bg);
+      padding: 4px 10px;
+      border-radius: var(--radius-small);
+      border: 1px solid var(--input-border);
+      min-width: 60px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--primary-green);
+      font-weight: 600;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: var(--font-base);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-green), var(--dark-green));
+      color: #0a0a0a;
+      box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+      flex: 1;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #262626;
+      color: #e0e0e0;
+      border: 1px solid #333;
+      flex: 1;
+    }
+
+    .btn-secondary:hover {
+      background: #303030;
+      border-color: #444;
+    }
+
+    .settings-toggle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      cursor: pointer;
+      user-select: none;
+      margin-top: 8px;
+    }
+
+    .settings-toggle:hover {
+      opacity: 0.8;
+    }
+
+    .settings-label {
+      font-size: 0.9rem;
+      color: #cccccc;
+      font-weight: 500;
+    }
+
+    .toggle-arrow {
+      color: var(--primary-green);
+      font-size: 1.2rem;
+      transition: transform var(--transition);
+    }
+
+    .toggle-arrow.open {
+      transform: rotate(90deg);
+    }
+
+    .advanced-settings {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #333;
+      display: none;
+      gap: 12px;
+    }
+
+    .advanced-settings.open {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--primary-green);
+    }
+
+    .checkbox-row label {
+      margin: 0;
+      cursor: pointer;
+    }
+
+    /* ========== PROGRESS PANEL ========== */
+    .progress-container {
+      text-align: center;
+      padding: 20px;
+      display: none;
+    }
+
+    .progress-container.active {
+      display: block;
+    }
+
+    .spinner-progress {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 5px solid #444;
+      border-top-color: var(--primary-green);
+      animation: spin-loader 1.2s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    .progress-text {
+      color: #aaaaaa;
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+    }
+
+    .progress-percentage {
+      font-size: 1.4rem;
+      color: var(--primary-green);
+      font-weight: 700;
+    }
+
+    .time-remaining {
+      color: #888;
+      font-size: 0.85rem;
+      margin-top: 8px;
+    }
+
+    /* ========== PREVIEW PANEL ========== */
+    .preview-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--primary-green);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 12px;
+    }
+
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .image-card {
+      border-radius: var(--radius-small);
+      border: 1px solid var(--input-border);
+      overflow: hidden;
+      background: var(--input-bg);
+      transition: all var(--transition);
+    }
+
+    .image-card:hover {
+      border-color: var(--primary-green);
+      box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.2);
+    }
+
+    .image-preview {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: #111;
+      display: block;
+    }
+
+    .image-actions {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .format-select {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: var(--radius-small);
+      border: 1px solid var(--input-border);
+      background: var(--input-bg);
+      color: var(--light-grey);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .btn-download {
+      width: 100%;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      background: linear-gradient(135deg, var(--primary-green), var(--dark-green));
+      color: #0a0a0a;
+    }
+
+    .btn-copy-prompt {
+      width: 100%;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      background: #262626;
+      color: #e0e0e0;
+      border: 1px solid #333;
+    }
+
+    .btn-copy-prompt:hover {
+      background: #303030;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #888;
+    }
+
+    .empty-state p {
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    .image-meta {
+      font-size: 0.75rem;
+      color: #999;
+      margin-top: 4px;
+      word-break: break-word;
+    }
+
+    .image-prompt {
+      font-size: 0.8rem;
+      color: #aaaaaa;
+      padding: 6px;
+      background: rgba(46, 204, 113, 0.1);
+      border-radius: var(--radius-small);
+      margin-top: 6px;
+      word-break: break-word;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, var(--primary-green), var(--dark-green));
+      color: #0a0a0a;
+      padding: 12px 20px;
+      border-radius: 999px;
+      box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+      font-size: 0.9rem;
+      font-weight: 600;
+      animation: slide-in 0.3s ease-out;
+      z-index: 1000;
+    }
+
+    @keyframes slide-in {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* ========== ACTIVITY LOG ========== */
+    #activity-log-container {
+      width: 100%;
+      background: linear-gradient(145deg, #1b1b1b, #151515);
+      border-top: 1px solid var(--border);
+      border-radius: 0;
+      padding: 16px 24px;
+    }
+
+    .activity-log-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--primary-green);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 10px;
+    }
+
+    #activity-log {
+      max-height: 200px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 6px;
+      font-size: 0.85rem;
+      font-family: 'Courier New', monospace;
+    }
+
+    .log-entry {
+      padding: 8px 10px;
+      background: rgba(46, 204, 113, 0.05);
+      border-left: 3px solid var(--primary-green);
+      color: #aaaaaa;
+      word-break: break-word;
+    }
+
+    .log-entry.success {
+      border-left-color: #2ecc71;
+      color: #2ecc71;
+    }
+
+    .log-entry.error {
+      border-left-color: #ff6b6b;
+      color: #ff6b6b;
+    }
+
+    .log-timestamp {
+      color: #666;
+      font-size: 0.75rem;
+      margin-right: 6px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- LOADING SCREEN -->
+  <div id="startup-loader">
+    <div class="spinner-large"></div>
+    <h1>Imagiri</h1>
+    <p>Loading Stable Diffusion AI Model</p>
+    <div class="loading-status">This happens only once...</div>
+  </div>
+
+  <!-- MAIN APPLICATION -->
+  <div id="main-app">
+    <header>
+      <div class="nav-title">Imagiri</div>
+      <div class="nav-tagline">AI-Powered Image Generation</div>
+    </header>
+
+    <main>
+      <!-- LEFT PANEL: INPUT -->
+      <div class="panel">
+        <div class="panel-title">✏️ Prompt</div>
+        <textarea id="promptInput" placeholder="e.g., a futuristic city at sunset, highly detailed, cinematic lighting..."></textarea>
+
+        <div class="panel-title" style="margin-top: 16px;">⚙️ Settings</div>
+
+        <label for="stepsSlider">Inference Steps</label>
+        <div class="slider-row">
+          <input type="range" id="stepsSlider" min="5" max="150" value="10" />
+          <span class="slider-value" id="stepsValue">10</span>
+        </div>
+
+        <label for="widthSlider">Width (px)</label>
+        <div class="slider-row">
+          <input type="range" id="widthSlider" min="256" max="768" step="64" value="512" />
+          <span class="slider-value" id="widthValue">512</span>
+        </div>
+
+        <label for="heightSlider">Height (px)</label>
+        <div class="slider-row">
+          <input type="range" id="heightSlider" min="256" max="768" step="64" value="640" />
+          <span class="slider-value" id="heightValue">640</span>
+        </div>
+
+        <label for="numImagesSlider">Number of Images</label>
+        <div class="slider-row">
+          <input type="range" id="numImagesSlider" min="1" max="4" value="1" />
+          <span class="slider-value" id="numImagesValue">1</span>
+        </div>
+
+        <!-- Advanced Settings Toggle -->
+        <div class="settings-toggle" onclick="toggleAdvanced()">
+          <span class="settings-label">Advanced Options</span>
+          <span class="toggle-arrow" id="toggleArrow">›</span>
+        </div>
+
+        <div class="advanced-settings" id="advancedSettings">
+          <label for="negativePrompt">Negative Prompt</label>
+          <textarea id="negativePrompt" placeholder="e.g., blurry, low quality, distorted..." style="min-height: 80px;"></textarea>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="enhancementToggle" checked />
+            <label for="enhancementToggle">Prompt Enhancement (adds quality keywords)</label>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button class="btn-primary" id="generateBtn" onclick="generateImage()">Generate</button>
+          <button class="btn-secondary" id="clearBtn" onclick="clearForm()">Clear</button>
+        </div>
+      </div>
+
+      <!-- MIDDLE PANEL: PROGRESS -->
+      <div class="panel">
+        <div class="progress-container" id="progressContainer">
+          <div class="spinner-progress"></div>
+          <div class="progress-text">Generating Image...</div>
+          <div class="progress-percentage" id="progressPercentage">0%</div>
+          <div class="time-remaining" id="timeRemaining">Est. time: --</div>
+        </div>
+        <div id="defaultMessage" style="text-align: center; color: #888; padding: 60px 20px; font-size: 0.95rem;">
+          <p>👈 Enter a prompt and click "Generate"</p>
+          <p style="margin-top: 8px; font-size: 0.85rem; opacity: 0.7;">Images will appear on the right</p>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL: PREVIEW -->
+      <div class="panel">
+        <div class="preview-title">Generated Images</div>
+        <div id="imagesContainer"></div>
+        <div class="empty-state" id="emptyState">
+          <p>No images generated yet</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- ACTIVITY LOG AT BOTTOM -->
+    <div id="activity-log-container">
+      <div class="activity-log-title">Activity Log</div>
+      <div id="activity-log"></div>
+    </div>
+  </div>
+
+  <script>
+    // ========== STATE & UTILITIES ==========
+    let isGenerating = false;
+    let generatedImagesData = [];
+
+    function addLog(message, type = 'info') {
+      const logElement = document.getElementById('activity-log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> ${message}`;
+      logElement.appendChild(entry);
+      
+      // Keep only last 50 entries
+      while (logElement.children.length > 50) {
+        logElement.removeChild(logElement.children[0]);
+      }
+    }
+
+    function showToast(message) {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+
+    function toggleAdvanced() {
+      const settings = document.getElementById('advancedSettings');
+      const arrow = document.getElementById('toggleArrow');
+      settings.classList.toggle('open');
+      arrow.classList.toggle('open');
+    }
+
+    // Update slider displays
+    document.getElementById('stepsSlider').addEventListener('input', function() {
+      document.getElementById('stepsValue').textContent = this.value;
+    });
+    document.getElementById('widthSlider').addEventListener('input', function() {
+      document.getElementById('widthValue').textContent = this.value;
+    });
+    document.getElementById('heightSlider').addEventListener('input', function() {
+      document.getElementById('heightValue').textContent = this.value;
+    });
+    document.getElementById('numImagesSlider').addEventListener('input', function() {
+      document.getElementById('numImagesValue').textContent = this.value;
+    });
+
+    // Enter key to generate
+    document.getElementById('promptInput').addEventListener('keydown', function(e) {
+      if (e.ctrlKey && e.key === 'Enter') {
+        generateImage();
+      }
+    });
+
+    // ========== MODEL LOADING ==========
+    async function waitUntilModelReady() {
+      const loader = document.getElementById('startup-loader');
+      const app = document.getElementById('main-app');
+      const maxWaitTime = 300000;
+      const startTime = Date.now();
+
+      while (true) {
+        try {
+          const resp = await fetch('/api/status');
+          const status = await resp.json();
+          
+          if (status.ready) {
+            loader.style.display = 'none';
+            app.style.display = 'flex';
+            addLog('✅ Model ready! Start generating images', 'success');
+            showToast('✅ Model ready! Start generating images');
+            return;
+          }
+        } catch (e) {
+          console.log('Checking model...');
+        }
+
+        if (Date.now() - startTime > maxWaitTime) {
+          loader.innerHTML = '<p style="color: #ff6b6b; font-size: 1.2rem;">⚠️ Model loading is taking too long</p>';
+          addLog('❌ Model loading timeout', 'error');
+          break;
+        }
+
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+
+    window.addEventListener('load', waitUntilModelReady);
+
+    // ========== IMAGE GENERATION ==========
+    async function generateImage() {
+      if (isGenerating) return;
+
+      const prompt = document.getElementById('promptInput').value.trim();
+      if (!prompt) {
+        addLog('⚠️ Please enter a prompt', 'error');
+        showToast('⚠️ Please enter a prompt');
+        return;
+      }
+
+      isGenerating = true;
+      document.getElementById('generateBtn').disabled = true;
+      document.getElementById('progressContainer').classList.add('active');
+      document.getElementById('defaultMessage').style.display = 'none';
+
+      addLog(`Starting generation: "${prompt.substring(0, 50)}..."`, 'info');
+
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress = Math.min(progress + Math.random() * 25, 90);
+        document.getElementById('progressPercentage').textContent = Math.floor(progress) + '%';
+      }, 300);
+
+      try {
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: prompt,
+            negative_prompt: document.getElementById('negativePrompt').value,
+            enhancement: document.getElementById('enhancementToggle').checked,
+            steps: parseInt(document.getElementById('stepsSlider').value),
+            width: parseInt(document.getElementById('widthSlider').value),
+            height: parseInt(document.getElementById('heightSlider').value),
+            num_images: parseInt(document.getElementById('numImagesSlider').value),
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Generation failed');
+        }
+
+        const data = await response.json();
+        clearInterval(progressInterval);
+        
+        if (data.success) {
+          document.getElementById('progressPercentage').textContent = '100%';
+          generatedImagesData = data.images;
+          displayImages(data.images, data.prompt);
+          addLog(`✅ Generated ${data.images.length} image(s) - logged to CSV`, 'success');
+          showToast('✅ Images generated successfully!');
+          
+          setTimeout(() => {
+            document.getElementById('progressContainer').classList.remove('active');
+            document.getElementById('generateBtn').disabled = false;
+            isGenerating = false;
+          }, 1500);
+        } else {
+          throw new Error(data.error || 'Unknown error');
+        }
+      } catch (error) {
+        clearInterval(progressInterval);
+        console.error('Error:', error);
+        addLog(`❌ Error: ${error.message}`, 'error');
+        showToast('❌ Error: ' + error.message);
+        document.getElementById('progressContainer').classList.remove('active');
+        document.getElementById('defaultMessage').style.display = 'block';
+        document.getElementById('generateBtn').disabled = false;
+        isGenerating = false;
+      }
+    }
+
+    // ========== DISPLAY IMAGES ==========
+    function displayImages(images, originalPrompt) {
+      const container = document.getElementById('imagesContainer');
+      const emptyState = document.getElementById('emptyState');
+      
+      container.innerHTML = '';
+      emptyState.style.display = 'none';
+
+      const grid = document.createElement('div');
+      grid.className = 'image-grid';
+
+      images.forEach((img, idx) => {
+        const card = document.createElement('div');
+        card.className = 'image-card';
+
+        const imgElement = document.createElement('img');
+        imgElement.src = '/download/' + img.filename.replace('.png', '') + '/png';
+        imgElement.className = 'image-preview';
+        imgElement.alt = `Generated image ${idx + 1}`;
+        imgElement.onerror = () => {
+          imgElement.style.backgroundColor = '#ff6b6b';
+        };
+
+        const actions = document.createElement('div');
+        actions.className = 'image-actions';
+
+        const select = document.createElement('select');
+        select.className = 'format-select';
+        select.innerHTML = '<option value="png">PNG</option><option value="jpg">JPEG</option>';
+
+        const downloadBtn = document.createElement('button');
+        downloadBtn.className = 'btn-download';
+        downloadBtn.textContent = 'Download';
+        downloadBtn.onclick = () => downloadImage(img, select.value);
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'btn-copy-prompt';
+        copyBtn.textContent = 'Copy Prompt';
+        copyBtn.onclick = () => {
+          navigator.clipboard.writeText(originalPrompt);
+          addLog(`Copied prompt: "${originalPrompt.substring(0, 40)}..."`, 'info');
+          showToast('Prompt copied!');
+        };
+
+        const meta = document.createElement('div');
+        meta.className = 'image-meta';
+        meta.textContent = `Image ${idx + 1}`;
+
+        const promptDisplay = document.createElement('div');
+        promptDisplay.className = 'image-prompt';
+        promptDisplay.textContent = originalPrompt.substring(0, 100) + (originalPrompt.length > 100 ? '...' : '');
+
+        actions.appendChild(select);
+        actions.appendChild(downloadBtn);
+        actions.appendChild(copyBtn);
+        actions.appendChild(meta);
+        actions.appendChild(promptDisplay);
+
+        card.appendChild(imgElement);
+        card.appendChild(actions);
+        grid.appendChild(card);
+      });
+
+      container.appendChild(grid);
+    }
+
+    function downloadImage(img, format) {
+      const url = img['url_' + format];
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = img.filename.replace('.png', '.' + format);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      addLog(`Downloading ${format.toUpperCase()}: ${img.filename}`, 'success');
+      showToast('Downloading ' + format.toUpperCase() + '...');
+    }
+
+    function clearForm() {
+      document.getElementById('promptInput').value = '';
+      document.getElementById('negativePrompt').value = '';
+      document.getElementById('stepsSlider').value = 10;
+      document.getElementById('stepsValue').textContent = '10';
+      document.getElementById('widthSlider').value = 512;
+      document.getElementById('widthValue').textContent = '512';
+      document.getElementById('heightSlider').value = 640;
+      document.getElementById('heightValue').textContent = '640';
+      document.getElementById('numImagesSlider').value = 1;
+      document.getElementById('numImagesValue').textContent = '1';
+      document.getElementById('enhancementToggle').checked = true;
+      addLog('Form cleared', 'info');
+      showToast('✨ Form cleared');
+    }
+  </script>
+
+</body>
+</html>
