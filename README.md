@@ -14,8 +14,8 @@ Main UI preview:
 
 Sample generated images:
 
-![Sample Generation 1](generated_images/sample1.png)
-![Sample Generation 2](generated_images/sample2.png)
+![Sample Generation 1](generated_images/imagiri_20251128_232629_0.png)
+![Sample Generation 2](generated_images/imagiri_20251128_234137_0.png)
 
 (Place `sample.png` in the repo root, and put `sample1.png` and `sample2.png` inside `generated_images/` or adjust the paths above.)
 
