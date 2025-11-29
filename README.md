@@ -1,6 +1,7 @@
 # Imagiri – AI Text-to-Image Generator
 
 [Live Demo](https://imagiri-ai.onrender.com)
+the deployment isn't working due to ```Web Service imagiri.ai exceeded its memory limit```
 
 Imagiri is a web-based text-to-image generation system built with open-source models and frameworks. It lets users enter natural language prompts and generate high-quality images with configurable parameters like steps, resolution, and number of images.
 
