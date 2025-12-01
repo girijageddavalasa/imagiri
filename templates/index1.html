@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imagiri Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f1014;       /* Deep dark background */
+            --panel-color: #1b1c21;    /* Slightly lighter for boxes */
+            --accent: #fff;            /* White text */
+            --highlight: #6366f1;      /* Purple/Blue accent */
+            --console-font: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--accent);
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 1. HEADER */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-family: 'Courier New', cursive; /* Sketchy vibe */
+            font-size: 3rem;
+            margin: 0;
+            font-weight: normal;
+        }
+
+        /* 2. SEARCH BAR AREA */
+        .input-container {
+            max-width: 900px;
+            margin: 0 auto 30px auto;
+            position: relative;
+            width: 100%;
+        }
+
+        .search-bar {
+            background: var(--panel-color);
+            border: 2px solid #333;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .search-bar input {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            flex-grow: 1;
+            outline: none;
+            font-family: var(--console-font);
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .icon-btn:hover { color: white; }
+        .icon-btn.active { color: var(--highlight); }
+
+        /* Hidden Settings Panel (Toggled by the Plus button) */
+        .settings-panel {
+            display: none; /* Hidden by default */
+            background: #25262c;
+            position: absolute;
+            top: 110%;
+            left: 0;
+            right: 0;
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 10;
+            border: 1px solid #444;
+            display: none; 
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .settings-panel.show { display: grid; }
+        
+        .setting-item label { display: block; font-size: 0.8rem; color: #aaa; margin-bottom: 5px; }
+        .setting-item input { width: 100%; background: #111; border: 1px solid #444; color: white; padding: 5px; border-radius: 4px;}
+
+        /* 3. MAIN CONTENT GRID (Logs vs Image) */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr; /* Logs take less space than image */
+            gap: 20px;
+            flex-grow: 1; /* Fill remaining height */
+            min-height: 0; /* Important for scrollbars */
+        }
+
+        /* LEFT BOX: LOGS */
+        .panel {
+            background: var(--panel-color);
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .panel h2 {
+            margin-top: 0;
+            font-family: 'Courier New', cursive;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .log-console {
+            font-family: var(--console-font);
+            font-size: 0.9rem;
+            color: #0f0; /* Matrix green */
+            overflow-y: auto;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column-reverse; /* Newest logs at bottom */
+        }
+
+        .log-entry { margin-bottom: 5px; border-bottom: 1px dashed #333; padding-bottom: 2px;}
+        .log-time { color: #666; margin-right: 10px; }
+
+        /* RIGHT BOX: GENERATED IMAGE */
+        .image-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+
+        .image-display img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        
+        .placeholder-text {
+            color: #444;
+            font-size: 2rem;
+            font-family: 'Courier New', cursive;
+        }
+
+        /* Loading Spinner */
+        .loader {
+            border: 4px solid #333;
+            border-top: 4px solid var(--highlight);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Imagiri</h1>
+    </div>
+
+    <div class="input-container">
+        <div class="search-bar">
+            <input type="text" id="prompt" placeholder="Describe your imagination..." autocomplete="off">
+            
+            <div class="actions">
+                <button class="icon-btn" onclick="toggleSettings()" title="Settings">
+                    <i class="fa-solid fa-circle-plus"></i>
+                </button>
+                
+                <button class="icon-btn" onclick="generate()" title="Generate">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="settings-panel" id="settingsPanel">
+            <div class="setting-item">
+                <label>Width</label>
+                <input type="number" id="width" value="512" step="64">
+            </div>
+            <div class="setting-item">
+                <label>Height</label>
+                <input type="number" id="height" value="640" step="64">
+            </div>
+            <div class="setting-item">
+                <label>Steps</label>
+                <input type="number" id="steps" value="25">
+            </div>
+        </div>
+    </div>
+
+    <div class="main-grid">
+        
+        <div class="panel">
+            <h2>> logs</h2>
+            <div class="log-console" id="logConsole">
+                <div class="log-entry"><span class="log-time">--:--:--</span>System initialized...</div>
+            </div>
+        </div>
+
+        <div class="panel image-display" id="imageArea">
+            <div class="placeholder-text">Generated Image</div>
+            <div class="loader" id="loader"></div>
+            <img id="resultImage" src="" style="display:none;">
+        </div>
+    </div>
+
+<script>
+    const logConsole = document.getElementById('logConsole');
+    const resultImage = document.getElementById('resultImage');
+    const loader = document.getElementById('loader');
+    const placeholder = document.querySelector('.placeholder-text');
+
+    function toggleSettings() {
+        const panel = document.getElementById('settingsPanel');
+        panel.classList.toggle('show');
+    }
+
+    function addLog(message) {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString();
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        div.innerHTML = `<span class="log-time">${timeString}</span>${message}`;
+        // Insert at top (since we used flex-direction: column-reverse)
+        logConsole.insertBefore(div, logConsole.firstChild);
+    }
+
+    async function generate() {
+        const prompt = document.getElementById('prompt').value;
+        if (!prompt) {
+            addLog("Error: Prompt is empty.");
+            return;
+        }
+
+        // UI Reset
+        placeholder.style.display = 'none';
+        resultImage.style.display = 'none';
+        loader.style.display = 'block';
+        addLog(`Processing: "${prompt}"`);
+
+        const payload = {
+            prompt: prompt,
+            width: document.getElementById('width').value,
+            height: document.getElementById('height').value,
+            steps: document.getElementById('steps').value,
+            num_images: 1,
+            enhancement: true
+        };
+
+        try {
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Update Image
+                resultImage.src = data.images[0].url_png;
+                resultImage.onload = () => {
+                    loader.style.display = 'none';
+                    resultImage.style.display = 'block';
+                    addLog("Success: Image rendered.");
+                    addLog(`Saved as: ${data.images[0].filename}`);
+                };
+            } else {
+                loader.style.display = 'none';
+                placeholder.style.display = 'block';
+                placeholder.innerText = "Error";
+                addLog(`Failed: ${data.error}`);
+            }
+
+        } catch (error) {
+            console.error(error);
+            loader.style.display = 'none';
+            addLog("Error: Network failure.");
+        }
+    }
+    
+    // Check initial status
+    fetch('/api/status')
+        .then(r => r.json())
+        .then(d => {
+            if(d.ready) addLog(`Model Loaded on ${d.device.toUpperCase()}`);
+            else addLog("Waiting for model...");
+        });
+</script>
+
+</body>
+</html>
