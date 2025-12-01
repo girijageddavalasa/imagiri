@@ -20,6 +20,7 @@ Sample generated images:
 
 (Place `sample.png` in the repo root, and put `sample1.png` and `sample2.png` inside `generated_images/` or adjust the paths above.)
 
+index1.html is just extra template to use if required rename index1.html or index2.html file to index.html to actually use it 
 ---
 
 ## Features
